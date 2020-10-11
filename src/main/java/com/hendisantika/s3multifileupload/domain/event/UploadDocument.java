@@ -1,4 +1,7 @@
-package com.hendisantika.s3multifileupload.domain;
+package com.hendisantika.s3multifileupload.domain.event;
+
+import org.springframework.context.ApplicationEvent;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Created by IntelliJ IDEA.
