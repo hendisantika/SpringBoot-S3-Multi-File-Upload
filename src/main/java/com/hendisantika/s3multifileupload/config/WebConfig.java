@@ -1,5 +1,9 @@
 package com.hendisantika.s3multifileupload.config;
 
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
 /**
  * Created by IntelliJ IDEA.
  * Project : s3-multi-file-upload
