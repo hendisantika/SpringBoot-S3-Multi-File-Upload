@@ -17,7 +17,7 @@ import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 /**
  * Created by IntelliJ IDEA.
@@ -70,7 +70,7 @@ public class S3FileUploaderServiceImpl implements FileUploaderService {
     }
 
     private String getFileName(MultipartFile document) {
-        return new Date().getTime() + "-" + document.getOriginalFilename().replace(" ", "_");
+        return LocalDateTime.now() + "-" + document.getOriginalFilename().replace(" ", "_");
     }
 
     private File convertToFile(MultipartFile multipartFile) throws IOException {
