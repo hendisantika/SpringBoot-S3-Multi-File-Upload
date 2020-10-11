@@ -5,11 +5,15 @@ import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.hendisantika.s3multifileupload.exception.FileUploadFailedException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.PostConstruct;
+import java.io.File;
+import java.io.IOException;
 
 /**
  * Created by IntelliJ IDEA.
@@ -43,4 +47,17 @@ public class S3FileUploaderServiceImpl implements FileUploaderService {
         this.s3client =
                 AmazonS3ClientBuilder.standard().withCredentials(new AWSStaticCredentialsProvider(credentials)).withRegion("us-east-1").build();
     }
+
+    @Override
+    public void upload(MultipartFile document) {
+        try {
+            File file = convertToFile(document);
+            String fileName = getFileName(document);
+
+            uploadToS3(fileName, file);
+        } catch (IOException e) {
+            throw new FileUploadFailedException(e);
+        }
+    }
+
 }
