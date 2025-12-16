@@ -1,22 +1,22 @@
 package com.hendisantika.s3multifileupload.service;
 
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.CannedAccessControlList;
-import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.hendisantika.s3multifileupload.exception.FileUploadFailedException;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
-import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDateTime;
 
 /**
@@ -28,29 +28,18 @@ import java.time.LocalDateTime;
  * Date: 11/10/20
  * Time: 11.35
  */
+@Slf4j
 @Service
+@RequiredArgsConstructor
 @ConditionalOnProperty(
         name = "uploadServiceType",
         havingValue = "s3")
 public class S3FileUploaderServiceImpl implements FileUploaderService {
 
-    @Value("${s3.endpointUrl}")
-    private String endpointUrl;
-    @Value("${s3.accessKey}")
-    private String accessKey;
-    @Value("${s3.secretKey}")
-    private String secretKey;
+    private final S3Client s3Client;
+
     @Value("${s3.bucketName}")
     private String bucketName;
-
-    private AmazonS3 s3client;
-
-    @PostConstruct
-    private void initializeAmazon() {
-        AWSCredentials credentials = new BasicAWSCredentials(this.accessKey, this.secretKey);
-        this.s3client =
-                AmazonS3ClientBuilder.standard().withCredentials(new AWSStaticCredentialsProvider(credentials)).withRegion("us-east-1").build();
-    }
 
     @Override
     public void upload(MultipartFile document) {
@@ -59,14 +48,37 @@ public class S3FileUploaderServiceImpl implements FileUploaderService {
             String fileName = getFileName(document);
 
             uploadToS3(fileName, file);
+            file.delete();
         } catch (IOException e) {
             throw new FileUploadFailedException(e);
         }
     }
 
     private void uploadToS3(String fileName, File file) {
-        s3client.putObject(new PutObjectRequest(bucketName, fileName, file)
-                .withCannedAcl(CannedAccessControlList.BucketOwnerFullControl));
+        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                .bucket(bucketName)
+                .key(fileName)
+                .acl(ObjectCannedACL.BUCKET_OWNER_FULL_CONTROL)
+                .build();
+
+        s3Client.putObject(putObjectRequest, RequestBody.fromFile(file));
+        log.info("Upload File success: {}", fileName);
+    }
+
+    public String uploadFile(ByteArrayResource resource, String fileName) {
+        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                .bucket(bucketName)
+                .key(fileName)
+                .build();
+
+        try (InputStream inputStream = resource.getInputStream()) {
+            s3Client.putObject(putObjectRequest,
+                    RequestBody.fromInputStream(inputStream, resource.contentLength()));
+            log.info("Upload File success: {}", fileName);
+        } catch (Exception e) {
+            log.error("Error while uploading to s3 file {} with error: {}", fileName, e.getMessage());
+        }
+        return fileName;
     }
 
     private String getFileName(MultipartFile document) {
